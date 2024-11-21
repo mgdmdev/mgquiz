@@ -1,0 +1,30 @@
+{
+    "name": "mgquiz-backend",
+    "version": "1.0.0",
+    "description": "Backend API for MGQuiz, providing articles, quiz generation, and webhook support.",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js",
+      "dev": "nodemon server.js"
+    },
+    "keywords": [
+      "quiz",
+      "articles",
+      "api",
+      "openai",
+      "backend"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "dependencies": {
+      "cors": "^2.8.5",
+      "dotenv": "^16.0.3",
+      "express": "^4.18.2",
+      "express-rate-limit": "^6.8.0",
+      "mongoose": "^7.3.1",
+      "openai": "^3.2.1"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    }
+  }  

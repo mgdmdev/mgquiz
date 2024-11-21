@@ -1,0 +1,24 @@
+backend/
+├── server.js                 # Main entry point
+├── package.json              # Dependencies and scripts
+├── .env                      # Environment variables
+├── .gitignore                # Ignore sensitive files
+├── src/
+│   ├── app.js                # Express app setup
+│   ├── config/
+│   │   ├── db.js             # Database connection
+│   ├── controllers/
+│   │   ├── articleController.js  # Handles article-related API logic
+│   │   ├── quizController.js     # Handles quiz-related API logic
+│   ├── middlewares/
+│   │   ├── errorMiddleware.js    # Global error handling
+│   │   ├── rateLimitMiddleware.js # Rate limiting for endpoints
+│   ├── models/
+│   │   ├── Article.js         # Mongoose model for articles
+│   │   ├── Quiz.js            # Mongoose model for quizzes
+│   ├── routes/
+│   │   ├── articleRoutes.js   # Routes for article APIs
+│   │   ├── quizRoutes.js      # Routes for quiz APIs
+│   ├── services/
+│   │   ├── openaiService.js   # Handles OpenAI communication
+│   │   ├── webhookService.js  # Handles webhook logic
