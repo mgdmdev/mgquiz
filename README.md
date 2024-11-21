@@ -99,8 +99,8 @@ WEBHOOK_URL=https://your-webhook-url # Optional: URL for webhook notifications
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/mgquiz-backend.git
-cd mgquiz-backend
+git clone https://github.com/mgdmdev/mgquiz.git
+cd mgquiz
 ```
 
 ### 2. Install Dependencies
@@ -163,7 +163,7 @@ npm test
 ## Project Structure
 
 ```
-mgquiz-backend/
+mgquiz/
 ├── controllers/
 │   ├── articleController.js
 │   ├── quizController.js
