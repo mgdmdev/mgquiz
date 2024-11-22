@@ -1,14 +1,18 @@
-// src/routes/quizRoutes.js
-
 const express = require("express");
-const quizController = require("../controllers/quizController");
+const { generateQuiz, getAllQuizzes, getQuizById, deleteQuiz } = require("../controllers/quizController");
 
 const router = express.Router();
 
-// Routes for quizzes
-router.get("/", quizController.getAllQuizzes); // Get all quizzes
-router.get("/:id", quizController.getQuizById); // Get a specific quiz by ID
-router.post("/generate", quizController.generateQuiz); // Generate a new quiz for an article
-router.delete("/:id", quizController.deleteQuiz); // Delete a specific quiz by ID
+// Route to generate a quiz
+router.post("/generate", generateQuiz);
+
+// Route to get all quizzes
+router.get("/", getAllQuizzes);
+
+// Route to get a quiz by ID
+router.get("/:id", getQuizById);
+
+// Route to delete a quiz by ID
+router.delete("/:id", deleteQuiz);
 
 module.exports = router;
