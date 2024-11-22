@@ -17,6 +17,14 @@ const openai = new OpenAIApi(configuration);
  */
 const generateQuiz = async (content, difficulty, numQuestions) => {
     try {
+        // Validate input
+        if (!difficulty) {
+            throw new Error("Difficulty level is required.");
+        }
+        if (typeof difficulty !== "string") {
+            throw new Error("Difficulty must be a string.");
+        }
+
         // Construct the prompt for OpenAI
         const prompt = `Create a ${numQuestions}-question quiz based on the following article content:
         Difficulty: ${difficulty.toUpperCase()}
