@@ -1,34 +1,31 @@
-const axios = require('axios');
-const crypto = require('crypto');
+// src/services/webhookService.js
+
+const axios = require("axios");
 
 /**
- * Send a webhook notification to a given URL with a payload.
+ * Send a webhook notification to a specified URL.
  * @param {string} url - The webhook URL to send the notification to.
- * @param {Object} payload - The data payload to send.
- * @param {string} secret - The secret used to sign the webhook.
- * @returns {Promise<void>}
+ * @param {Object} data - The payload to send in the webhook.
+ * @returns {Promise<void>} - Resolves if the webhook is sent successfully.
  */
-const sendWebhook = async (url, payload, secret) => {
-  try {
-    // Generate a signature for payload verification
-    const signature = crypto
-      .createHmac('sha256', secret)
-      .update(JSON.stringify(payload))
-      .digest('hex');
+const sendWebhook = async (url, data) => {
+    try {
+        if (!url) {
+            throw new Error("Webhook URL is not defined.");
+        }
 
-    // Send the webhook request
-    await axios.post(url, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Hub-Signature-256': `sha256=${signature}`, // Custom header for payload verification
-      },
-    });
+        const response = await axios.post(url, data, {
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
-    console.log(`Webhook sent to ${url}`);
-  } catch (error) {
-    console.error(`Failed to send webhook to ${url}:`, error.message);
-    // Handle retries or logging for failed webhooks
-  }
+        console.log(`Webhook sent successfully to ${url}:`, response.status);
+    } catch (error) {
+        console.error(`Failed to send webhook to ${url}:`, error.message);
+    }
 };
 
-module.exports = { sendWebhook };
+module.exports = {
+    sendWebhook,
+};

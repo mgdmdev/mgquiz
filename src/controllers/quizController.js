@@ -1,114 +1,124 @@
-const mongoose = require("mongoose");
-const { Quiz } = require("../models/Quiz");
-const { Article } = require("../models/Article");
-const openaiService = require("../services/openaiService");
-const cacheService = require("../services/cacheService");
+// src/controllers/quizController.js
 
-exports.generateQuiz = async (req, res) => {
+const cacheService = require("../services/cacheService");
+const openaiService = require("../services/openaiService");
+const Quiz = require("../models/Quiz");
+
+/**
+ * Generate a quiz for a given article.
+ * @route POST /api/quizzes/generate
+ */
+exports.generateQuiz = async (req, res, next) => {
     try {
         const { articleId, difficulty, numQuestions } = req.body;
 
-        // Validate `articleId`
-        if (!mongoose.Types.ObjectId.isValid(articleId)) {
-            return res.status(400).json({
-                message: "Invalid articleId format. Must be a valid MongoDB ObjectId.",
-            });
+        if (!articleId || !difficulty || !numQuestions) {
+            return res.status(400).json({ message: "Missing required fields: articleId, difficulty, numQuestions." });
         }
 
-        // Check if the article exists
-        const article = await Article.findById(articleId);
-        if (!article) {
-            return res.status(404).json({ message: "Article not found." });
-        }
-
-        // Check cache for an existing quiz
-        const cachedQuiz = await cacheService.getQuizFromCache(articleId, difficulty, numQuestions);
+        // Check if quiz is already cached
+        const cachedQuiz = cacheService.get(articleId);
         if (cachedQuiz) {
-            return res.status(200).json({
-                success: true,
-                quiz: cachedQuiz,
-                message: "Quiz served from cache.",
-            });
+            return res.status(200).json(cachedQuiz);
+        }
+
+        // Check if quiz already exists in the database
+        const existingQuiz = await Quiz.findOne({ articleId, difficulty });
+        if (existingQuiz) {
+            cacheService.set(articleId, existingQuiz);
+            return res.status(200).json(existingQuiz);
         }
 
         // Generate a new quiz using OpenAI
+        const articleContent = "Placeholder article content"; // Replace with actual article content fetch logic
         const quizData = await openaiService.generateQuiz({
-            content: article.content,
+            content: articleContent,
             difficulty,
             numQuestions,
         });
 
         if (!quizData || quizData.length === 0) {
-            return res.status(500).json({
-                message: "Failed to generate quiz. OpenAI returned no data.",
-            });
+            return res.status(500).json({ message: "Failed to generate quiz." });
         }
 
-        // Save the quiz to the database
+        // Save the quiz in the database
         const newQuiz = new Quiz({
             articleId,
-            questions: quizData,
             difficulty,
-            createdAt: new Date(),
+            questions: quizData,
         });
-        await newQuiz.save();
 
-        // Cache the generated quiz
-        await cacheService.saveQuizToCache(articleId, difficulty, numQuestions, quizData);
+        const savedQuiz = await newQuiz.save();
 
-        // Return the generated quiz
-        res.status(201).json({
-            success: true,
-            quiz: quizData,
-            message: "Quiz generated successfully.",
-        });
+        // Cache the new quiz
+        cacheService.set(articleId, savedQuiz);
+
+        res.status(201).json(savedQuiz);
     } catch (error) {
-        res.status(500).json({
-            message: error.message || "An unexpected error occurred while generating the quiz.",
-        });
+        console.error("Error generating quiz:", error.message);
+        next(error);
     }
 };
 
-exports.getQuizByArticleId = async (req, res) => {
+/**
+ * Get all quizzes.
+ * @route GET /api/quizzes
+ */
+exports.getAllQuizzes = async (req, res, next) => {
     try {
-        const { articleId } = req.params;
+        const quizzes = await Quiz.find();
+        res.status(200).json(quizzes);
+    } catch (error) {
+        console.error("Error fetching quizzes:", error.message);
+        next(error);
+    }
+};
 
-        // Validate `articleId`
-        if (!mongoose.Types.ObjectId.isValid(articleId)) {
-            return res.status(400).json({
-                message: "Invalid articleId format. Must be a valid MongoDB ObjectId.",
-            });
+/**
+ * Get a specific quiz by ID.
+ * @route GET /api/quizzes/:id
+ */
+exports.getQuizById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const cachedQuiz = cacheService.get(id);
+        if (cachedQuiz) {
+            return res.status(200).json(cachedQuiz);
         }
 
-        // Fetch quiz from the database
-        const quiz = await Quiz.findOne({ articleId });
+        const quiz = await Quiz.findById(id);
         if (!quiz) {
-            return res.status(404).json({
-                message: "No quiz found for the given articleId.",
-            });
+            return res.status(404).json({ message: "Quiz not found." });
         }
 
-        res.status(200).json({
-            success: true,
-            quiz,
-        });
+        cacheService.set(id, quiz);
+        res.status(200).json(quiz);
     } catch (error) {
-        res.status(500).json({
-            message: error.message || "An unexpected error occurred while fetching the quiz.",
-        });
+        console.error("Error fetching quiz by ID:", error.message);
+        next(error);
     }
 };
 
-exports.getAllQuizzes = async (req, res) => {
+/**
+ * Delete a quiz by ID.
+ * @route DELETE /api/quizzes/:id
+ */
+exports.deleteQuiz = async (req, res, next) => {
     try {
-        const quizzes = await Quiz.find().sort({ createdAt: -1 });
-        res.status(200).json({
-            success: true,
-            quizzes,
-        });
+        const { id } = req.params;
+
+        const deletedQuiz = await Quiz.findByIdAndDelete(id);
+        if (!deletedQuiz) {
+            return res.status(404).json({ message: "Quiz not found." });
+        }
+
+        // Clear cache for this quiz
+        cacheService.delete(id);
+
+        res.status(200).json({ message: "Quiz deleted successfully." });
     } catch (error) {
-        res.status(500).json({
-            message: error.message || "An unexpected error occurred while fetching quizzes.",
-        });
+        console.error("Error deleting quiz:", error.message);
+        next(error);
     }
 };

@@ -1,24 +1,19 @@
+// src/middlewares/errorMiddleware.js
+
 /**
- * Error handling middleware for Express.
- * @param {Error} err - The error object.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
- * @param {Function} next - The next middleware function.
+ * Error-handling middleware for Express.
+ * Catches errors and returns a structured JSON response.
  */
 const errorMiddleware = (err, req, res, next) => {
-    console.error(`Error: ${err.message}`);
-  
-    const statusCode = err.statusCode || 500;
-    const response = {
-      message: err.message || 'Internal Server Error',
-    };
-  
-    if (process.env.NODE_ENV === 'development') {
-      response.stack = err.stack;
-    }
-  
-    res.status(statusCode).json(response);
-  };
-  
-  module.exports = errorMiddleware;
-  
+  console.error("Error:", err.message);
+
+  // Determine the appropriate status code
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+
+  res.status(statusCode).json({
+      message: err.message || "An unexpected error occurred.",
+      stack: process.env.NODE_ENV === "production" ? null : err.stack, // Hide stack trace in production
+  });
+};
+
+module.exports = errorMiddleware;

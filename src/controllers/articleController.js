@@ -1,72 +1,135 @@
-const Article = require('../models/Article');
+// src/controllers/articleController.js
+
+const Article = require("../models/Article");
+const cacheService = require("../services/cacheService");
+
+/**
+ * Get all articles.
+ * @route GET /api/articles
+ */
+exports.getAllArticles = async (req, res, next) => {
+    try {
+        const cachedArticles = cacheService.get("articles");
+        if (cachedArticles) {
+            return res.status(200).json(cachedArticles);
+        }
+
+        const articles = await Article.find();
+        cacheService.set("articles", articles);
+
+        res.status(200).json(articles);
+    } catch (error) {
+        console.error("Error fetching articles:", error.message);
+        next(error);
+    }
+};
+
+/**
+ * Get a single article by ID.
+ * @route GET /api/articles/:id
+ */
+exports.getArticleById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const cachedArticle = cacheService.get(id);
+        if (cachedArticle) {
+            return res.status(200).json(cachedArticle);
+        }
+
+        const article = await Article.findById(id);
+        if (!article) {
+            return res.status(404).json({ message: "Article not found." });
+        }
+
+        cacheService.set(id, article);
+
+        res.status(200).json(article);
+    } catch (error) {
+        console.error("Error fetching article by ID:", error.message);
+        next(error);
+    }
+};
 
 /**
  * Create a new article.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
- * @param {Function} next - The next middleware function.
+ * @route POST /api/articles
  */
-const createArticle = async (req, res, next) => {
-  try {
-    const { title, content } = req.body;
+exports.createArticle = async (req, res, next) => {
+    try {
+        const { title, content } = req.body;
 
-    // Validate input
-    if (!title || !content) {
-      const error = new Error('Title and content are required.');
-      error.statusCode = 400;
-      throw error;
+        if (!title || !content) {
+            return res.status(400).json({ message: "Title and content are required." });
+        }
+
+        const newArticle = new Article({ title, content });
+        const savedArticle = await newArticle.save();
+
+        // Clear cache for articles list to reflect the new addition
+        cacheService.delete("articles");
+
+        res.status(201).json(savedArticle);
+    } catch (error) {
+        console.error("Error creating article:", error.message);
+        next(error);
     }
-
-    // Create and save the article
-    const newArticle = new Article({ title, content });
-    await newArticle.save();
-
-    res.status(201).json(newArticle);
-  } catch (error) {
-    next(error);
-  }
 };
 
 /**
- * Retrieve all articles.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
- * @param {Function} next - The next middleware function.
+ * Update an article by ID.
+ * @route PUT /api/articles/:id
  */
-const getArticles = async (req, res, next) => {
-  try {
-    const articles = await Article.find().sort({ createdAt: -1 }); // Sort by most recent
-    res.status(200).json(articles);
-  } catch (error) {
-    next(error);
-  }
+exports.updateArticle = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { title, content } = req.body;
+
+        if (!title && !content) {
+            return res.status(400).json({ message: "At least one field (title or content) is required." });
+        }
+
+        const updatedArticle = await Article.findByIdAndUpdate(
+            id,
+            { title, content },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedArticle) {
+            return res.status(404).json({ message: "Article not found." });
+        }
+
+        // Update the cache
+        cacheService.set(id, updatedArticle);
+        cacheService.delete("articles");
+
+        res.status(200).json(updatedArticle);
+    } catch (error) {
+        console.error("Error updating article:", error.message);
+        next(error);
+    }
 };
 
 /**
- * Retrieve a single article by ID.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
- * @param {Function} next - The next middleware function.
+ * Delete an article by ID.
+ * @route DELETE /api/articles/:id
  */
-const getArticleById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const article = await Article.findById(id);
+exports.deleteArticle = async (req, res, next) => {
+    try {
+        const { id } = req.params;
 
-    if (!article) {
-      const error = new Error('Article not found');
-      error.statusCode = 404;
-      throw error;
+        const deletedArticle = await Article.findByIdAndDelete(id);
+        if (!deletedArticle) {
+            return res.status(404).json({ message: "Article not found." });
+        }
+
+        // Clear cache
+        cacheService.delete(id);
+        cacheService.delete("articles");
+
+        res.status(200).json({ message: "Article deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting article:", error.message);
+        next(error);
     }
-
-    res.status(200).json(article);
-  } catch (error) {
-    next(error);
-  }
-};
-
-module.exports = {
-  createArticle,
-  getArticles,
-  getArticleById,
 };
