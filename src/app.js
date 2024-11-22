@@ -1,9 +1,6 @@
-// src/app.js
-
 const express = require("express");
-const morgan = require("morgan");
 const cors = require("cors");
-const helmet = require("helmet");
+const morgan = require("morgan");
 const rateLimitMiddleware = require("./middlewares/rateLimitMiddleware");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 const quizRoutes = require("./routes/quizRoutes");
@@ -12,21 +9,28 @@ const articleRoutes = require("./routes/articleRoutes");
 const app = express();
 
 // Middleware
-app.use(morgan("combined")); // HTTP request logging
 app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(helmet()); // Add security headers
-app.use(express.json()); // Parse JSON request bodies
-app.use(rateLimitMiddleware); // Apply rate limiting
-
-// Routes
-app.use("/api/articles", articleRoutes); // Article-related routes
-app.use("/api/quizzes", quizRoutes); // Quiz-related routes
+app.use(express.json()); // Parse JSON requests
+app.use(morgan("dev")); // Log HTTP requests
+app.use(rateLimitMiddleware); // Apply rate limiting middleware
 
 // Health Check Endpoints
-app.get("/health", (req, res) => res.status(200).json({ status: "healthy" }));
-app.get("/ready", (req, res) => res.status(200).json({ status: "ready" }));
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "Healthy" });
+});
 
-// Error Handling Middleware
+app.get("/ready", (req, res) => {
+    res.status(200).json({ status: "Ready" });
+});
+
+// Routes
+app.use("/api/quizzes", quizRoutes); // Quiz-related routes
+app.use("/api/articles", articleRoutes); // Article-related routes
+
+// Error Middleware (for unhandled routes and errors)
+app.use((req, res, next) => {
+    res.status(404).json({ message: "Route not found." });
+});
 app.use(errorMiddleware);
 
 module.exports = app;
