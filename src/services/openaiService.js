@@ -1,61 +1,55 @@
-// src/services/openaiService.js
+const { OpenAIApi, Configuration } = require("openai");
 
-const { Configuration, OpenAIApi } = require("openai");
-
+// Initialize OpenAI API client with API Key and Organization ID
 const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY, // Load the API key from environment variables
+    apiKey: process.env.OPENAI_API_KEY, // Your OpenAI API Key
+    organization: "org-6Si0MO5Vk3qkyKjZAnSs9tpn", // Your OpenAI Organization ID
 });
 
 const openai = new OpenAIApi(configuration);
 
 /**
- * Generate quiz questions using OpenAI GPT.
- * @param {Object} params - Parameters for quiz generation.
- * @param {string} params.content - Article content for quiz generation.
- * @param {string} params.difficulty - Difficulty level (easy, medium, hard).
- * @param {number} params.numQuestions - Number of questions to generate.
- * @returns {Promise<Array>} - Generated quiz questions.
+ * Generate a quiz for a given article
+ * @param {string} content - The content of the article
+ * @param {string} difficulty - Difficulty level (e.g., "easy", "medium", "hard")
+ * @param {number} numQuestions - Number of questions to generate
+ * @returns {Promise<object>} - Generated quiz data
  */
-const generateQuiz = async ({ content, difficulty, numQuestions }) => {
+const generateQuiz = async (content, difficulty, numQuestions) => {
     try {
-        const prompt = `
-You are a quiz generator for an educational application. Based on the following article content, generate ${numQuestions} ${difficulty} multiple-choice questions. 
-Each question should have exactly 4 options, with one correct answer clearly labeled.
+        // Construct the prompt for OpenAI
+        const prompt = `Create a ${numQuestions}-question quiz based on the following article content:
+        Difficulty: ${difficulty.toUpperCase()}
+        Content: "${content}"
+        Format the quiz as a JSON array, where each question has:
+        - "question": The question text.
+        - "options": An array of four possible answers.
+        - "answer": The correct answer.`;
 
-Article Content:
-${content}
-
-Format your response as JSON:
-[
-  {
-    "question": "Question text?",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
-    "answer": "Correct Option"
-  }
-]
-        `;
-
-        const response = await openai.createCompletion({
-            model: "text-davinci-003", // Use OpenAI's GPT-3.5 model
-            prompt,
-            max_tokens: 1000,
-            temperature: 0.7,
+        // Send request to OpenAI
+        const response = await openai.createChatCompletion({
+            model: "gpt-4o", // GPT-4 optimized model
+            messages: [
+                {
+                    role: "system",
+                    content: "You are an assistant specializing in creating quizzes.",
+                },
+                {
+                    role: "user",
+                    content: prompt,
+                },
+            ],
+            temperature: 0.7, // Adjust creativity level
+            max_tokens: 1000, // Set token limit
         });
 
-        const quizData = JSON.parse(response.data.choices[0].text.trim());
-
-        // Validate the response structure
-        if (!Array.isArray(quizData)) {
-            throw new Error("Invalid response format from OpenAI.");
-        }
-
-        return quizData;
+        // Parse and return the generated quiz
+        const quiz = JSON.parse(response.data.choices[0].message.content);
+        return quiz;
     } catch (error) {
-        console.error("Error generating quiz from OpenAI:", error.message);
+        console.error("Error generating quiz:", error.response?.data || error.message);
         throw new Error("Failed to generate quiz. Please try again later.");
     }
 };
 
-module.exports = {
-    generateQuiz,
-};
+module.exports = { generateQuiz };
